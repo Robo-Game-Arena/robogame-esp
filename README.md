@@ -14,12 +14,9 @@ directly to the board through Bluepad32.
 
 ## Commands
 
-| Character | Action |
-| --- | --- |
-| `F` `B` `L` `R` `S` | Forward, back, left, right, stop |
-| `+` `-` | Shoulder up, shoulder down |
-| `X` `H` | Elbow up, elbow down |
-| `o` `c` | Gripper open, gripper close |
+Commands are single ASCII characters sent to one BLE characteristic. See
+[PROTOCOL.md](PROTOCOL.md) for the full command set, the transport details
+and the failsafe timings.
 
 ## Build and flash
 
