@@ -64,19 +64,46 @@ Arm commands come from `/robot_<id>/arm_command` as a `std_msgs/String`
 holding one character. Anything outside the arm command set is rejected by
 the bridge and never reaches the robot.
 
+## Control handover
+
+The robot takes commands from the ROS2 bridge whenever one is connected, and
+from a directly paired PS4 gamepad otherwise. This is decided by the BLE
+connection itself, not by a timeout.
+
+The firmware registers an ATT packet handler, so `ATT_EVENT_CONNECTED` and
+`ATT_EVENT_DISCONNECTED` mark the bridge as present or gone. Only centrals
+connecting to the robot raise these events, so a BLE gamepad that the robot
+connects out to is never mistaken for the bridge.
+
+| State | Who drives |
+| --- | --- |
+| Bridge connected | ROS2, gamepad input ignored |
+| Bridge not connected, gamepad paired | Gamepad |
+| Neither | Nobody, motors stay stopped |
+
+Motors stop the moment the bridge disconnects, and again when a paired
+gamepad disconnects.
+
+Characters typed into the serial console run immediately whatever the state
+is. While the bridge is connected its keepalive overwrites typed drive
+commands within 250 ms, so stop the bridge to drive from the monitor.
+
 ## Timing and failsafes
 
-The bridge resends the current drive command every 250 ms, including `S`.
-This serves two purposes.
-
-| Timeout | Value | Behaviour |
+| Setting | Value | Behaviour |
 | --- | --- | --- |
+| Bridge keepalive | 250 ms | Resends the current drive command, including `S` |
 | `DRIVE_COMMAND_TIMEOUT_MS` | 750 ms | Motors stop if no drive command arrives |
-| `ROS_CONTROL_TIMEOUT_MS` | 1500 ms | Control falls back to the PS4 gamepad |
 
-So a dropped BLE link stops the motors within 750 ms, and a ROS2 host that
-goes away hands control to a directly paired gamepad after 1.5 seconds. When
-the bridge starts sending again it immediately reclaims control.
+The drive timeout applies only while the bridge is disconnected, so it
+guards the gamepad path. A drive command from the bridge holds until the
+next one arrives.
 
-The firmware also stops the motors when a BLE central disconnects and when a
-paired gamepad disconnects.
+The keepalive is redundancy rather than a heartbeat. Writes are sent without
+a response, so they are never acknowledged, and resending means a single
+lost write cannot leave the robot driving in the wrong direction.
+
+A bridge that stops responding without dropping its BLE connection leaves
+the motors running, because nothing on either side is watching a clock. A
+crash, an unplugged adapter or a robot going out of range all drop the
+connection and stop the motors.
