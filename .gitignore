@@ -5,3 +5,4 @@
 .vscode/ipch
 compile_commands.json
 src/att_profile.h
+__pycache__/

@@ -8,9 +8,10 @@ Import("env")
 project_dir = env["PROJECT_DIR"]
 gatt_path = os.path.join(project_dir, "src", "att_profile.gatt")
 header_path = os.path.join(project_dir, "src", "att_profile.h")
+compile_gatt_path = os.path.join(project_dir, "tools", "compile_gatt.py")
 
 
-def find_compile_gatt():
+def find_btstack_headers():
     framework_dir = env.PioPlatform().get_package_dir(
         "framework-arduinoespressif32"
     )
@@ -18,12 +19,19 @@ def find_compile_gatt():
     if not framework_dir:
         return None
 
-    matches = glob.glob(
-        os.path.join(framework_dir, "**", "compile_gatt.py"),
-        recursive=True
-    )
+    sdk_dir = os.path.join(framework_dir, "tools", "sdk")
+    mcu = env.BoardConfig().get("build.mcu", "esp32")
 
-    return matches[0] if matches else None
+    candidates = [os.path.join(sdk_dir, mcu, "include", "btstack", "src")]
+    candidates += sorted(glob.glob(
+        os.path.join(sdk_dir, "*", "include", "btstack", "src")
+    ))
+
+    for candidate in candidates:
+        if os.path.exists(os.path.join(candidate, "bluetooth_gatt.h")):
+            return candidate
+
+    return None
 
 
 def header_is_current():
@@ -37,13 +45,13 @@ def generate_header():
     if header_is_current():
         return
 
-    compile_gatt = find_compile_gatt()
+    btstack_headers = find_btstack_headers()
 
-    if compile_gatt is None:
+    if btstack_headers is None:
         print(
-            "compile_gatt.py was not found in the Arduino framework package. "
-            f"Generate {header_path} from {gatt_path} manually using the "
-            "compile_gatt.py tool shipped with BTstack."
+            "BTstack headers were not found in the Arduino framework "
+            "package. Check that platform_packages points at the Bluepad32 "
+            "framework."
         )
         env.Exit(1)
         return
@@ -51,7 +59,13 @@ def generate_header():
     print(f"Generating {header_path} from {gatt_path}")
 
     subprocess.run(
-        [sys.executable, compile_gatt, gatt_path, header_path],
+        [
+            sys.executable,
+            compile_gatt_path,
+            "-I", btstack_headers,
+            gatt_path,
+            header_path,
+        ],
         check=True
     )
 

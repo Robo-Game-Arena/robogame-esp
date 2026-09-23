@@ -32,7 +32,9 @@ pio run -e robot_2 -t upload
 ```
 
 The BLE profile header `src/att_profile.h` is generated from
-`src/att_profile.gatt` by a pre-build script, so it is not checked in.
+`src/att_profile.gatt` before each build by `tools/compile_gatt.py`, so it is
+not checked in. That tool comes from BTstack and needs either OpenSSL or the
+`pycryptodome` package on the build machine.
 
 ## Layout
 
