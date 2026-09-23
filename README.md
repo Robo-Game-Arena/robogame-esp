@@ -66,8 +66,8 @@ monitor, which is useful for checking wiring without any Bluetooth. Press
 | --- | --- | --- |
 | Left motor forward (A1) | J2 | 13 |
 | Left motor backward (A2) | J2 | 14 |
-| Right motor forward (B1) | J2 | 18 |
-| Right motor backward (B2) | J2 | 19 |
+| Right motor forward (B2) | J2 | 19 |
+| Right motor backward (B1) | J2 | 18 |
 | Motor driver sleep | | 4 |
 | Servo driver SDA | J4 | 21 |
 | Servo driver SCL | J4 | 22 |
