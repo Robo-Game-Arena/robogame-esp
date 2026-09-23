@@ -33,8 +33,23 @@ class RobotCommandCallbacks : public NimBLECharacteristicCallbacks {
 static RobotServerCallbacks serverCallbacks;
 static RobotCommandCallbacks commandCallbacks;
 
+static char deviceName[32] = {0};
+
+const char *getBleDeviceName() {
+  if (deviceName[0] == '\0') {
+    snprintf(
+        deviceName,
+        sizeof(deviceName),
+        "%s-%d",
+        BLE_NAME_PREFIX,
+        ROBOT_ID);
+  }
+
+  return deviceName;
+}
+
 void setupBleService() {
-  NimBLEDevice::init(BLE_DEVICE_NAME);
+  NimBLEDevice::init(getBleDeviceName());
 
   NimBLEServer *server = NimBLEDevice::createServer();
   server->setCallbacks(&serverCallbacks);

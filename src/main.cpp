@@ -15,7 +15,7 @@ void setup() {
   setupBleService();
 
   Serial.print("Advertising as ");
-  Serial.println(BLE_DEVICE_NAME);
+  Serial.println(getBleDeviceName());
 }
 
 void loop() {
