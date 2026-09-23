@@ -10,7 +10,7 @@ static Adafruit_PWMServoDriver servoDriver = Adafruit_PWMServoDriver();
 static int shoulderAngle = SHOULDER_START_ANGLE;
 static int elbowAngle = ELBOW_START_ANGLE;
 
-static bool gripperIsPowered = false;
+static bool gripperPowered = false;
 static unsigned long gripperPoweredAtMs = 0;
 
 static uint16_t angleToPulse(int angle) {
@@ -27,7 +27,7 @@ static void cutServoPower(int channel) {
 
 static void startGripperMove(int angle) {
   setServoAngle(SERVO_GRIPPER_CHANNEL, angle);
-  gripperIsPowered = true;
+  gripperPowered = true;
   gripperPoweredAtMs = millis();
 }
 
@@ -46,7 +46,7 @@ void setupArm() {
 }
 
 void updateArm() {
-  if (!gripperIsPowered) {
+  if (!gripperPowered) {
     return;
   }
 
@@ -55,7 +55,7 @@ void updateArm() {
   }
 
   cutServoPower(SERVO_GRIPPER_CHANNEL);
-  gripperIsPowered = false;
+  gripperPowered = false;
 }
 
 void moveShoulder(int angleStep) {
@@ -66,6 +66,18 @@ void moveShoulder(int angleStep) {
 void moveElbow(int angleStep) {
   elbowAngle = constrain(elbowAngle + angleStep, 0, 180);
   setServoAngle(SERVO_ELBOW_CHANNEL, elbowAngle);
+}
+
+int getShoulderAngle() {
+  return shoulderAngle;
+}
+
+int getElbowAngle() {
+  return elbowAngle;
+}
+
+bool gripperIsPowered() {
+  return gripperPowered;
 }
 
 void openGripper() {

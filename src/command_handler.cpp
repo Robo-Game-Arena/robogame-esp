@@ -6,55 +6,58 @@
 #include "motors.h"
 
 static unsigned long lastDriveCommandMs = 0;
-static unsigned long lastRosCommandMs = 0;
-static bool rosWasInControl = false;
+static char currentDriveCommand = COMMAND_STOP;
+static bool rosConnected = false;
 
-void noteRosActivity() {
-  lastRosCommandMs = millis();
+char getCurrentDriveCommand() {
+  return currentDriveCommand;
+}
 
-  if (!rosWasInControl) {
-    rosWasInControl = true;
-    Serial.println("ROS2 host has control");
+void setRosConnected(bool connected) {
+  if (rosConnected == connected) {
+    return;
   }
+
+  rosConnected = connected;
+
+  if (connected) {
+    Serial.println("ROS2 host connected and has control");
+    return;
+  }
+
+  stopMotors();
+  Serial.println("ROS2 host disconnected, gamepad has control");
 }
 
 bool rosHasControl() {
-  if (lastRosCommandMs == 0) {
-    return false;
-  }
-
-  if (millis() - lastRosCommandMs < ROS_CONTROL_TIMEOUT_MS) {
-    return true;
-  }
-
-  if (rosWasInControl) {
-    rosWasInControl = false;
-    Serial.println("ROS2 host went quiet, gamepad has control");
-  }
-
-  return false;
+  return rosConnected;
 }
 
 static void handleCommand(char command) {
   switch (command) {
     case COMMAND_DRIVE_FORWARD:
       driveForward();
+      currentDriveCommand = command;
       lastDriveCommandMs = millis();
       break;
     case COMMAND_DRIVE_BACKWARD:
       driveBackward();
+      currentDriveCommand = command;
       lastDriveCommandMs = millis();
       break;
     case COMMAND_TURN_LEFT:
       turnLeft();
+      currentDriveCommand = command;
       lastDriveCommandMs = millis();
       break;
     case COMMAND_TURN_RIGHT:
       turnRight();
+      currentDriveCommand = command;
       lastDriveCommandMs = millis();
       break;
     case COMMAND_STOP:
       stopMotors();
+      currentDriveCommand = command;
       lastDriveCommandMs = millis();
       break;
     case COMMAND_SHOULDER_UP:
@@ -89,6 +92,10 @@ void handleCommands(const char *commands, size_t length) {
 }
 
 void updateDriveTimeout() {
+  if (rosConnected) {
+    return;
+  }
+
   if (!motorsAreRunning()) {
     return;
   }

@@ -4,5 +4,6 @@
 
 void handleCommands(const char *commands, size_t length);
 void updateDriveTimeout();
-void noteRosActivity();
+void setRosConnected(bool connected);
 bool rosHasControl();
+char getCurrentDriveCommand();

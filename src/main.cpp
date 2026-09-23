@@ -6,6 +6,7 @@
 #include "config.h"
 #include "gamepad_control.h"
 #include "motors.h"
+#include "serial_monitor.h"
 
 void setup() {
   Serial.begin(115200);
@@ -18,11 +19,14 @@ void setup() {
 
   Serial.print("Advertising as ");
   Serial.println(getBleDeviceName());
+
+  setupSerialMonitor();
 }
 
 void loop() {
   updateArm();
   updateGamepadControl();
   updateDriveTimeout();
+  updateSerialMonitor();
   delay(20);
 }

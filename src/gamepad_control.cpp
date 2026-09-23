@@ -61,8 +61,8 @@ static void sendCommand(char command) {
 
 static void updateDriving(ControllerPtr controller) {
   char command = driveCommandFromSticks(
-      controller->axisY(),
-      controller->axisRX());
+      controller->axisRY(),
+      controller->axisX());
 
   if (command == lastDriveCommand) {
     if (command != COMMAND_STOP) {

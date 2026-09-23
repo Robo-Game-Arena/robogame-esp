@@ -5,22 +5,32 @@
 
 static bool motorsRunning = false;
 
-static void setMotorPins(int in1, int in2, int in3, int in4) {
-  digitalWrite(MOTOR_IN1_PIN, in1);
-  digitalWrite(MOTOR_IN2_PIN, in2);
-  digitalWrite(MOTOR_IN3_PIN, in3);
-  digitalWrite(MOTOR_IN4_PIN, in4);
+static void setMotorPins(
+    int leftForward,
+    int leftBackward,
+    int rightForward,
+    int rightBackward) {
+  digitalWrite(MOTOR_LEFT_FORWARD_PIN, leftForward);
+  digitalWrite(MOTOR_LEFT_BACKWARD_PIN, leftBackward);
+  digitalWrite(MOTOR_RIGHT_FORWARD_PIN, rightForward);
+  digitalWrite(MOTOR_RIGHT_BACKWARD_PIN, rightBackward);
 
-  motorsRunning = in1 == HIGH || in2 == HIGH || in3 == HIGH || in4 == HIGH;
+  motorsRunning = leftForward == HIGH || leftBackward == HIGH
+      || rightForward == HIGH || rightBackward == HIGH;
 }
 
 void setupMotors() {
-  pinMode(MOTOR_IN1_PIN, OUTPUT);
-  pinMode(MOTOR_IN2_PIN, OUTPUT);
-  pinMode(MOTOR_IN3_PIN, OUTPUT);
-  pinMode(MOTOR_IN4_PIN, OUTPUT);
+  pinMode(MOTOR_SLEEP_PIN, OUTPUT);
+  digitalWrite(MOTOR_SLEEP_PIN, LOW);
+
+  pinMode(MOTOR_LEFT_FORWARD_PIN, OUTPUT);
+  pinMode(MOTOR_LEFT_BACKWARD_PIN, OUTPUT);
+  pinMode(MOTOR_RIGHT_FORWARD_PIN, OUTPUT);
+  pinMode(MOTOR_RIGHT_BACKWARD_PIN, OUTPUT);
 
   stopMotors();
+
+  digitalWrite(MOTOR_SLEEP_PIN, HIGH);
 }
 
 void driveForward() {

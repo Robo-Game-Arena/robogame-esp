@@ -82,16 +82,40 @@ static int attWriteCallback(
     return 0;
   }
 
-  noteRosActivity();
   handleCommands((const char *)buffer, bufferSize);
 
   return 0;
+}
+
+static void attPacketHandler(
+    uint8_t packetType,
+    uint16_t channel,
+    uint8_t *packet,
+    uint16_t size) {
+  UNUSED(channel);
+  UNUSED(size);
+
+  if (packetType != HCI_EVENT_PACKET) {
+    return;
+  }
+
+  switch (hci_event_packet_get_type(packet)) {
+    case ATT_EVENT_CONNECTED:
+      setRosConnected(true);
+      break;
+    case ATT_EVENT_DISCONNECTED:
+      setRosConnected(false);
+      break;
+    default:
+      break;
+  }
 }
 
 static void startAttServer(void *parameter) {
   UNUSED(parameter);
 
   att_server_init(profile_data, attReadCallback, attWriteCallback);
+  att_server_register_packet_handler(attPacketHandler);
 
   bd_addr_t nullAddress;
   memset(nullAddress, 0, sizeof(nullAddress));
