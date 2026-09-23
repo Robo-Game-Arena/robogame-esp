@@ -35,15 +35,12 @@ static void onControllerDisconnected(ControllerPtr controller) {
   Serial.println("Gamepad disconnected, motors stopped");
 }
 
-static char driveCommandFromInputs(
-    int forwardTrigger,
-    int backwardTrigger,
-    int turnAxis) {
-  if (forwardTrigger > GAMEPAD_TRIGGER_THRESHOLD) {
+static char driveCommandFromSticks(int forwardAxis, int turnAxis) {
+  if (forwardAxis < -GAMEPAD_DEADZONE) {
     return COMMAND_DRIVE_FORWARD;
   }
 
-  if (backwardTrigger > GAMEPAD_TRIGGER_THRESHOLD) {
+  if (forwardAxis > GAMEPAD_DEADZONE) {
     return COMMAND_DRIVE_BACKWARD;
   }
 
@@ -63,9 +60,8 @@ static void sendCommand(char command) {
 }
 
 static void updateDriving(ControllerPtr controller) {
-  char command = driveCommandFromInputs(
-      controller->throttle(),
-      controller->brake(),
+  char command = driveCommandFromSticks(
+      controller->axisY(),
       controller->axisRX());
 
   if (command == lastDriveCommand) {
