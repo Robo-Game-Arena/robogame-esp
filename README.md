@@ -14,6 +14,9 @@ directly to the board through Bluepad32.
 
 ## Commands
 
+A directly paired gamepad drives with R2 and L2 and turns with the right
+stick, matching the ROS2 controller mapping.
+
 Commands are single ASCII characters sent to one BLE characteristic. See
 [PROTOCOL.md](PROTOCOL.md) for the full command set, the transport details
 and the failsafe timings.
