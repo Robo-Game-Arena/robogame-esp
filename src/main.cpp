@@ -4,6 +4,7 @@
 #include "ble_service.h"
 #include "command_handler.h"
 #include "config.h"
+#include "gamepad_control.h"
 #include "motors.h"
 
 void setup() {
@@ -12,6 +13,7 @@ void setup() {
 
   setupMotors();
   setupArm();
+  setupGamepadControl();
   setupBleService();
 
   Serial.print("Advertising as ");
@@ -20,6 +22,7 @@ void setup() {
 
 void loop() {
   updateArm();
+  updateGamepadControl();
   updateDriveTimeout();
   delay(20);
 }

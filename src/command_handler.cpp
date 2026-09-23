@@ -6,6 +6,34 @@
 #include "motors.h"
 
 static unsigned long lastDriveCommandMs = 0;
+static unsigned long lastRosCommandMs = 0;
+static bool rosWasInControl = false;
+
+void noteRosActivity() {
+  lastRosCommandMs = millis();
+
+  if (!rosWasInControl) {
+    rosWasInControl = true;
+    Serial.println("ROS2 host has control");
+  }
+}
+
+bool rosHasControl() {
+  if (lastRosCommandMs == 0) {
+    return false;
+  }
+
+  if (millis() - lastRosCommandMs < ROS_CONTROL_TIMEOUT_MS) {
+    return true;
+  }
+
+  if (rosWasInControl) {
+    rosWasInControl = false;
+    Serial.println("ROS2 host went quiet, gamepad has control");
+  }
+
+  return false;
+}
 
 static void handleCommand(char command) {
   switch (command) {

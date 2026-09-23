@@ -1,39 +1,28 @@
 #include <Arduino.h>
-#include <NimBLEDevice.h>
+#include <Bluepad32.h>
+#include <btstack.h>
 
+#include "att_profile.h"
 #include "ble_service.h"
 #include "command_handler.h"
 #include "config.h"
-#include "motors.h"
 
-class RobotServerCallbacks : public NimBLEServerCallbacks {
-  void onConnect(NimBLEServer *server) override {
-    Serial.println("Controller connected");
-  }
+#define ROBOT_COMMAND_VALUE_HANDLE \
+  ATT_CHARACTERISTIC_BEB5483E_36E1_4688_B7F5_EA07361B26A8_01_VALUE_HANDLE
 
-  void onDisconnect(NimBLEServer *server) override {
-    Serial.println("Controller disconnected, motors stopped");
-    stopMotors();
-    NimBLEDevice::startAdvertising();
-  }
-};
-
-class RobotCommandCallbacks : public NimBLECharacteristicCallbacks {
-  void onWrite(NimBLECharacteristic *characteristic) override {
-    std::string value = characteristic->getValue();
-
-    if (value.empty()) {
-      return;
-    }
-
-    handleCommands(value.c_str(), value.length());
-  }
-};
-
-static RobotServerCallbacks serverCallbacks;
-static RobotCommandCallbacks commandCallbacks;
+static TaskHandle_t bleSetupTaskHandle;
+static btstack_context_callback_registration_t btstackMainThreadCallback;
 
 static char deviceName[32] = {0};
+static uint8_t scanResponseData[32] = {0};
+static uint8_t scanResponseLength = 0;
+
+static const uint8_t advertisingData[] = {
+    0x02, 0x01, 0x06,
+    0x11, 0x07,
+    0x4B, 0x91, 0x31, 0xC3, 0xC9, 0xC5, 0xCC, 0x8F,
+    0x9E, 0x45, 0xB5, 0x1F, 0x01, 0xC2, 0xAF, 0x4F,
+};
 
 const char *getBleDeviceName() {
   if (deviceName[0] == '\0') {
@@ -48,25 +37,100 @@ const char *getBleDeviceName() {
   return deviceName;
 }
 
+static void buildScanResponseData() {
+  const char *name = getBleDeviceName();
+  uint8_t nameLength = (uint8_t)strlen(name);
+
+  scanResponseData[0] = nameLength + 1;
+  scanResponseData[1] = 0x09;
+  memcpy(&scanResponseData[2], name, nameLength);
+
+  scanResponseLength = nameLength + 2;
+}
+
+static uint16_t attReadCallback(
+    hci_con_handle_t connectionHandle,
+    uint16_t attHandle,
+    uint16_t offset,
+    uint8_t *buffer,
+    uint16_t bufferSize) {
+  UNUSED(connectionHandle);
+  UNUSED(attHandle);
+  UNUSED(offset);
+  UNUSED(buffer);
+  UNUSED(bufferSize);
+
+  return 0;
+}
+
+static int attWriteCallback(
+    hci_con_handle_t connectionHandle,
+    uint16_t attHandle,
+    uint16_t transactionMode,
+    uint16_t offset,
+    uint8_t *buffer,
+    uint16_t bufferSize) {
+  UNUSED(connectionHandle);
+  UNUSED(transactionMode);
+  UNUSED(offset);
+
+  if (attHandle != ROBOT_COMMAND_VALUE_HANDLE) {
+    return 0;
+  }
+
+  if (bufferSize == 0) {
+    return 0;
+  }
+
+  noteRosActivity();
+  handleCommands((const char *)buffer, bufferSize);
+
+  return 0;
+}
+
+static void startAttServer(void *parameter) {
+  UNUSED(parameter);
+
+  att_server_init(profile_data, attReadCallback, attWriteCallback);
+
+  bd_addr_t nullAddress;
+  memset(nullAddress, 0, sizeof(nullAddress));
+
+  gap_advertisements_set_params(
+      0x0030,
+      0x0030,
+      0,
+      0,
+      nullAddress,
+      0x07,
+      0x00);
+
+  gap_advertisements_set_data(
+      (uint8_t)sizeof(advertisingData),
+      (uint8_t *)advertisingData);
+
+  gap_scan_response_set_data(scanResponseLength, scanResponseData);
+  gap_advertisements_enable(1);
+}
+
+static void bleSetupTask(void *parameter) {
+  UNUSED(parameter);
+
+  btstackMainThreadCallback.callback = &startAttServer;
+  btstack_run_loop_execute_on_main_thread(&btstackMainThreadCallback);
+
+  vTaskDelete(bleSetupTaskHandle);
+}
+
 void setupBleService() {
-  NimBLEDevice::init(getBleDeviceName());
+  buildScanResponseData();
 
-  NimBLEServer *server = NimBLEDevice::createServer();
-  server->setCallbacks(&serverCallbacks);
-
-  NimBLEService *service = server->createService(SERVICE_UUID);
-
-  NimBLECharacteristic *commandCharacteristic = service->createCharacteristic(
-      CHARACTERISTIC_UUID,
-      NIMBLE_PROPERTY::READ |
-      NIMBLE_PROPERTY::WRITE |
-      NIMBLE_PROPERTY::WRITE_NR);
-
-  commandCharacteristic->setCallbacks(&commandCallbacks);
-  service->start();
-
-  NimBLEAdvertising *advertising = NimBLEDevice::getAdvertising();
-  advertising->addServiceUUID(SERVICE_UUID);
-  advertising->setScanResponse(true);
-  advertising->start();
+  xTaskCreatePinnedToCore(
+      bleSetupTask,
+      "ble_setup",
+      10000,
+      NULL,
+      0,
+      &bleSetupTaskHandle,
+      0);
 }
