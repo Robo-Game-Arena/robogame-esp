@@ -1,0 +1,162 @@
+#include <Arduino.h>
+#include <NimBLEDevice.h>
+#include <Wire.h>
+#include <Adafruit_PWMServoDriver.h>
+
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+// --- MOTOR PIN DEFINITIONS ---
+#define IN1_PIN 2  // D0
+#define IN2_PIN 3  // D1
+#define IN3_PIN 4  // D2
+#define IN4_PIN 5  // D3
+
+// --- NATIVE I2C DEFINITIONS ---
+#define I2C_SDA_PIN 6  // D4
+#define I2C_SCL_PIN 7  // D5
+
+// PCA9685 Servo Channels
+#define SERVO_SHOULDER 1
+#define SERVO_ELBOW    2
+#define SERVO_GRIPPER  3
+
+#define SERVOMIN  120
+#define SERVOMAX  520
+
+float shoulder = 90.0;
+float elbow = 90.0;
+
+// --- RELAXED COMFORT LIMITS FOR THE CLAW ---
+const int GRIP_OPEN = 105;    // Backed off from 110
+const int GRIP_CLOSED = 40;   // Changed from 20 to prevent mechanical crushing stall
+
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+
+uint16_t angleToPulse(int angle) {
+  return map(angle, 0, 180, SERVOMIN, SERVOMAX);
+}
+
+void stopMotors() {
+  digitalWrite(IN1_PIN, LOW);
+  digitalWrite(IN2_PIN, LOW);
+  digitalWrite(IN3_PIN, LOW);
+  digitalWrite(IN4_PIN, LOW);
+}
+
+// Helper to safely shut off power to a specific servo channel
+void turnOffServo(int channel) {
+  pwm.setPWM(channel, 0, 0); // 0,0 completely cuts the PWM duty cycle pulse
+}
+
+class MyCharacteristicCallbacks: public NimBLECharacteristicCallbacks {
+    void onWrite(NimBLECharacteristic* pCharacteristic) {
+        std::string value = pCharacteristic->getValue();
+
+        if (value.length() > 0) {
+            char cmd = value[0];
+            Serial.print("Executing Command: ");
+            Serial.println(cmd);
+
+            switch(cmd) {
+                case 'F':
+                    digitalWrite(IN2_PIN, LOW);   digitalWrite(IN1_PIN, HIGH);
+                    digitalWrite(IN4_PIN, LOW);   digitalWrite(IN3_PIN, HIGH);
+                    break;
+                case 'B':
+                    digitalWrite(IN1_PIN, LOW);   digitalWrite(IN2_PIN, HIGH);
+                    digitalWrite(IN3_PIN, LOW);   digitalWrite(IN4_PIN, HIGH);
+                    break;
+                case 'L':
+                    digitalWrite(IN1_PIN, LOW);   digitalWrite(IN2_PIN, HIGH);
+                    digitalWrite(IN4_PIN, LOW);   digitalWrite(IN3_PIN, HIGH);
+                    break;
+                case 'R':
+                    digitalWrite(IN2_PIN, LOW);   digitalWrite(IN1_PIN, HIGH);
+                    digitalWrite(IN3_PIN, LOW);   digitalWrite(IN4_PIN, HIGH);
+                    break;
+                case 'S':
+                    stopMotors();
+                    break;
+
+                case '+':
+                    shoulder = constrain(shoulder + 5.0, 0, 180);
+                    pwm.setPWM(SERVO_SHOULDER, 0, angleToPulse((int)shoulder));
+                    break;
+                case '-':
+                    shoulder = constrain(shoulder - 5.0, 0, 180);
+                    pwm.setPWM(SERVO_SHOULDER, 0, angleToPulse((int)shoulder));
+                    break;
+                case 'X':
+                    elbow = constrain(elbow + 5.0, 0, 180);
+                    pwm.setPWM(SERVO_ELBOW, 0, angleToPulse((int)elbow));
+                    break;
+                case 'H':
+                    elbow = constrain(elbow - 5.0, 0, 180);
+                    pwm.setPWM(SERVO_ELBOW, 0, angleToPulse((int)elbow));
+                    break;
+
+                // --- PROTECTED GRIPPER CALLS WITH HARDWARE SLEEP ---
+                case 'o':
+                    pwm.setPWM(SERVO_GRIPPER, 0, angleToPulse(GRIP_OPEN));
+                    delay(400); // Give the claw time to arrive
+                    turnOffServo(SERVO_GRIPPER); // Cut power immediately to cool down
+                    Serial.println("Gripper opened and went to sleep.");
+                    break;
+                case 'c':
+                    pwm.setPWM(SERVO_GRIPPER, 0, angleToPulse(GRIP_CLOSED));
+                    delay(400); // Give the claw time to arrive
+                    turnOffServo(SERVO_GRIPPER); // Cut power immediately to cool down
+                    Serial.println("Gripper closed and went to sleep.");
+                    break;
+            }
+        }
+    }
+};
+
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+
+  pinMode(IN1_PIN, OUTPUT);
+  pinMode(IN2_PIN, OUTPUT);
+  pinMode(IN3_PIN, OUTPUT);
+  pinMode(IN4_PIN, OUTPUT);
+  stopMotors();
+
+  Wire.end();
+  delay(50);
+  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+
+  pwm.begin();
+  pwm.setPWMFreq(50);
+
+  pwm.setPWM(SERVO_SHOULDER, 0, angleToPulse((int)shoulder));
+  pwm.setPWM(SERVO_ELBOW, 0, angleToPulse((int)elbow));
+
+  // Start open, then immediately cut power so it stays cool at boot
+  pwm.setPWM(SERVO_GRIPPER, 0, angleToPulse(GRIP_OPEN));
+  delay(400);
+  turnOffServo(SERVO_GRIPPER);
+
+  NimBLEDevice::init("XIAO-C3-Robot");
+  NimBLEServer *pServer = NimBLEDevice::createServer();
+  NimBLEService *pService = pServer->createService(SERVICE_UUID);
+  NimBLECharacteristic *pCharacteristic = pService->createCharacteristic(
+                                         CHARACTERISTIC_UUID,
+                                         NIMBLE_PROPERTY::READ |
+                                         NIMBLE_PROPERTY::WRITE
+                                       );
+
+  pCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
+  pService->start();
+  NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->start();
+
+  Serial.println("Thermal protection activated for the gripper.");
+}
+
+void loop() {
+  delay(20);
+}

@@ -1,0 +1,42 @@
+#pragma once
+
+#define BLE_DEVICE_NAME     "XIAO-C3-Robot"
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+#define MOTOR_IN1_PIN 2
+#define MOTOR_IN2_PIN 3
+#define MOTOR_IN3_PIN 4
+#define MOTOR_IN4_PIN 5
+
+#define I2C_SDA_PIN 6
+#define I2C_SCL_PIN 7
+
+#define SERVO_SHOULDER_CHANNEL 1
+#define SERVO_ELBOW_CHANNEL    2
+#define SERVO_GRIPPER_CHANNEL  3
+
+#define SERVO_PULSE_MIN 120
+#define SERVO_PULSE_MAX 520
+
+#define SHOULDER_START_ANGLE 90
+#define ELBOW_START_ANGLE    90
+#define ARM_ANGLE_STEP       5
+
+#define GRIPPER_OPEN_ANGLE   105
+#define GRIPPER_CLOSED_ANGLE 40
+#define GRIPPER_TRAVEL_MS    400
+
+#define DRIVE_COMMAND_TIMEOUT_MS 750
+
+#define COMMAND_DRIVE_FORWARD  'F'
+#define COMMAND_DRIVE_BACKWARD 'B'
+#define COMMAND_TURN_LEFT      'L'
+#define COMMAND_TURN_RIGHT     'R'
+#define COMMAND_STOP           'S'
+#define COMMAND_SHOULDER_UP    '+'
+#define COMMAND_SHOULDER_DOWN  '-'
+#define COMMAND_ELBOW_UP       'X'
+#define COMMAND_ELBOW_DOWN     'H'
+#define COMMAND_GRIPPER_OPEN   'o'
+#define COMMAND_GRIPPER_CLOSE  'c'
