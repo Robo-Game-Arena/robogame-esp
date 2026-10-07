@@ -119,6 +119,16 @@ static void updateGripper(ControllerPtr controller) {
 void setupGamepadControl() {
   BP32.setup(&onControllerConnected, &onControllerDisconnected);
   BP32.enableVirtualDevice(false);
+
+  if (ALLOW_DIRECT_GAMEPAD_PAIRING) {
+    return;
+  }
+
+  // Forgetting stored keys as well stops a controller that paired with the
+  // robot before from reconnecting to it instead of the ROS2 host.
+  BP32.forgetBluetoothKeys();
+  BP32.enableNewBluetoothConnections(false);
+  Serial.println("Direct gamepad pairing is off");
 }
 
 bool gamepadIsConnected() {

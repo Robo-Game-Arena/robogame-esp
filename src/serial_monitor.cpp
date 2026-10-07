@@ -33,8 +33,9 @@ static void printHelp() {
   Serial.println("  ?           show this help");
   Serial.println("  !           toggle the periodic status line");
   Serial.println();
-  Serial.println("Typed commands run immediately. While a ROS2 host has");
-  Serial.println("control its keepalive overwrites drive commands.");
+  Serial.println("Typed commands run immediately at full speed. While a");
+  Serial.println("ROS2 host has control its keepalive overwrites drive");
+  Serial.println("commands with its own speeds.");
   Serial.println();
 }
 
@@ -47,8 +48,11 @@ static void printStatus() {
   Serial.print(controlSourceName());
   Serial.print(" drive=");
   Serial.print(getCurrentDriveCommand());
-  Serial.print(" motors=");
-  Serial.print(motorsAreRunning() ? "on" : "off");
+  Serial.print(" left=");
+  Serial.print(getLeftSpeed());
+  Serial.print("% right=");
+  Serial.print(getRightSpeed());
+  Serial.print("%");
   Serial.print(" gamepad=");
   Serial.print(gamepadIsConnected() ? "yes" : "no");
   Serial.print(" shoulder=");

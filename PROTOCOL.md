@@ -27,11 +27,12 @@ so `Fo` drives forward and opens the gripper in one write.
 
 | Character | Action | Effect on the robot |
 | --- | --- | --- |
-| `F` | Drive forward | Both motors forward until another drive command |
-| `B` | Drive backward | Both motors backward |
-| `L` | Turn left | Left motor back, right motor forward |
-| `R` | Turn right | Left motor forward, right motor back |
-| `S` | Stop | Both motors off |
+| `V` + 2 bytes | Drive at a speed | See below |
+| `F` | Drive forward | Both sides forward at full speed until another drive command |
+| `B` | Drive backward | Both sides backward at full speed |
+| `L` | Turn left | Left side back, right side forward |
+| `R` | Turn right | Left side forward, right side back |
+| `S` | Stop | All motors off |
 | `+` | Shoulder up | Shoulder servo moves 5 degrees, clamped to 0 - 180 |
 | `-` | Shoulder down | Shoulder servo moves 5 degrees down |
 | `X` | Elbow up | Elbow servo moves 5 degrees |
@@ -44,9 +45,38 @@ Unknown characters are logged over serial and ignored.
 Gripper power is cut once the claw has travelled, which keeps the servo from
 stalling and overheating while holding a token.
 
+### Speed command
+
+`V` is followed by two signed bytes: the forward speed, then the turn, each a
+percentage from -100 to 100. A positive turn turns left (counterclockwise
+from above), and values outside the range are clamped. The robot mixes them
+into wheel speeds:
+
+```
+left  = forward - turn
+right = forward + turn
+```
+
+If either side comes out above 100, both are scaled down by the same factor,
+so the robot keeps the same curve at the highest speed it can manage. For
+example `V 50 0` drives straight at half speed, `V 0 100` spins left in
+place, and `V 100 30` drives forward while curving left.
+
+The speed bytes are binary, so `V` cannot be typed in the serial monitor.
+Commands after the two bytes in the same write still run, so a speed and an
+arm command can share one write.
+
+Every drive command, `V` and the letters alike, drives both motor
+connectors, and is flipped when the firmware is built with `DRIVE_REVERSED`.
+
 ## When ROS2 sends each command
 
-Drive commands come from `/robot_<id>/cmd_vel`. The bridge converts a Twist
+Drive commands come from `/robot_<id>/cmd_vel`. By default the bridge sends
+a speed command: `linear.x` divided by `full_linear_speed` (0.5) is the
+forward speed and `angular.z` divided by `full_angular_speed` (1.5) is the
+turn, both as percentages.
+
+Launched with `drive_mode:=letters`, the bridge instead converts a Twist
 into one character, checking linear motion first:
 
 | Condition | Command |
@@ -64,6 +94,10 @@ Arm commands come from `/robot_<id>/arm_command` as a `std_msgs/String`
 holding one character. Anything outside the arm command set is rejected by
 the bridge and never reaches the robot.
 
+The bridge writes to each robot at most 20 times a second. A new drive
+command replaces one that has not been sent yet, while arm commands are kept
+in order and sent in the same write as the drive command.
+
 ## Control handover
 
 The robot takes commands from the ROS2 bridge whenever one is connected, and
@@ -80,6 +114,10 @@ connects out to is never mistaken for the bridge.
 | Bridge connected | ROS2, gamepad input ignored |
 | Bridge not connected, gamepad paired | Gamepad |
 | Neither | Nobody, motors stay stopped |
+
+Gamepads can only pair when the firmware is built with
+`ALLOW_DIRECT_GAMEPAD_PAIRING`. By default the robot forgets any paired
+gamepad at startup and accepts no new ones, so only the bridge drives it.
 
 Motors stop the moment the bridge disconnects, and again when a paired
 gamepad disconnects.

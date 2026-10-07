@@ -85,9 +85,30 @@ static void handleCommand(char command) {
   }
 }
 
+static void handleSpeedCommand(int8_t forwardPercent, int8_t turnPercent) {
+  driveWithSpeed(forwardPercent, turnPercent);
+  currentDriveCommand = COMMAND_SPEED;
+  lastDriveCommandMs = millis();
+}
+
+// A speed command is V followed by two signed bytes, the forward speed and
+// the turn, so those bytes are consumed here rather than read as commands.
 void handleCommands(const char *commands, size_t length) {
   for (size_t index = 0; index < length; index++) {
-    handleCommand(commands[index]);
+    if (commands[index] != COMMAND_SPEED) {
+      handleCommand(commands[index]);
+      continue;
+    }
+
+    if (index + 2 >= length) {
+      Serial.println("Speed command is missing its speed bytes");
+      return;
+    }
+
+    handleSpeedCommand(
+        (int8_t)commands[index + 1],
+        (int8_t)commands[index + 2]);
+    index += 2;
   }
 }
 
