@@ -58,7 +58,8 @@ static void setSideSpeeds(int left, int right) {
   int direction = DRIVE_REVERSED ? -1 : 1;
 
   for (int motor = 0; motor < MOTOR_COUNT; motor++) {
-    int speed = motors[motor].onLeft ? leftSpeed : rightSpeed;
+    bool drivesLeft = motors[motor].onLeft != SWAP_LEFT_RIGHT;
+    int speed = drivesLeft ? leftSpeed : rightSpeed;
     setMotorSpeed(motor, speed * direction);
   }
 }

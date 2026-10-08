@@ -26,11 +26,17 @@
 #define MOTOR_SECOND_RIGHT_BACKWARD_PIN 17
 
 // Set to true if F drives the robot backwards in the serial monitor. It
-// flips every drive command. If F is right but L turns the robot right,
-// swap the left and right pins instead. A single robot can be flipped with
+// flips every drive command. A single robot can be flipped with
 // -D DRIVE_REVERSED=true in its platformio.ini build_flags.
 #ifndef DRIVE_REVERSED
 #define DRIVE_REVERSED false
+#endif
+
+// Set to true if F is right but L turns the robot right. It swaps the left
+// and right motors on both connectors. A single robot can be changed with
+// -D SWAP_LEFT_RIGHT=true in its platformio.ini build_flags.
+#ifndef SWAP_LEFT_RIGHT
+#define SWAP_LEFT_RIGHT false
 #endif
 
 #define MOTOR_PWM_FREQUENCY  20000

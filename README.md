@@ -75,8 +75,8 @@ Lift the robot so the wheels spin freely, open the serial monitor, then:
    roll backwards, set `DRIVE_REVERSED` to `true` in `src/config.h`, or add
    `-D DRIVE_REVERSED=true` to that robot's `build_flags` to flip one robot.
 2. Type `L`. The robot should turn left (counterclockwise from above): left
-   wheels backwards, right wheels forwards. If it turns right, swap the
-   left and right motor pins in `src/config.h`.
+   wheels backwards, right wheels forwards. If it turns right, add
+   `-D SWAP_LEFT_RIGHT=true` to that robot's `build_flags`.
 3. Type `S` to stop.
 
 A single wheel spinning the wrong way is a wiring difference on that motor.
